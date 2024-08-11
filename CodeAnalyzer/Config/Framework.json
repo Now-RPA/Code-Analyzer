@@ -1,0 +1,84 @@
+﻿{
+  "StartupActivity": {
+    "Name": "Startup Activity",
+    "Description": "Startup activity should be named as Main",
+    "Enabled": true,
+    "Severity": "Fail",
+    "ExpectedName": "Main"
+  },
+  "FrameworkActivities": {
+    "Name": "Framework Activities",
+    "Description": "Framework specific activities should be present",
+    "Enabled": true,
+    "Severity": "Fail",
+    "RequiredActivities": [
+      "Initialize Workflow",
+      "Get Workitem",
+      "Process Workitem",
+      "Exit Workflow"
+    ]
+  },
+   "ActivityNamingConvention": {
+    "Name": "Activity Naming Convention",
+    "Description": "Activities should follow the specified naming convention",
+    "Enabled": true,
+    "Severity": "Warn",
+    "MinLength": 3,
+    "NamingRegex": "^[a-zA-Z0-9\\s-_]*$"
+  },
+  "GlobalVariableNamingConvention": {
+    "Name": "Global Variable Naming Convention",
+    "Description": "Global variables should follow the specified naming convention",
+    "Enabled": true,
+    "Severity": "Warn",
+    "MinLength": 3,
+    "NamingRegex": "^[a-zA-Z_][a-zA-Z0-9_]*$"
+  },
+  "ActivityVariableNamingConvention": {
+    "Name": "Activity Variable Naming Convention",
+    "Description": "Activity variables should follow the specified naming convention",
+    "Enabled": true,
+    "Severity": "Warn",
+    "MinLength": 3,
+    "NamingRegex": "^[a-zA-Z_][a-zA-Z0-9_]*$"
+  },
+  "GlobalVariablePlacement": {
+    "Name": "Global Variable Placement",
+    "Description": "Global Variables should be placed under 'Global Object/Variables' or its subfolders",
+    "Enabled": true,
+    "Severity": "Warn",
+    "ExpectedPath": "Global Objects/Variables"
+  },
+  "ExecutableComponentCount": {
+    "Name": "Executable Component Count",
+    "Description": "Total executable components per activity should be 30 or lower",
+    "Enabled": true,
+    "Severity": "Fail",
+    "MaxCount": 30
+  },
+  "ConnectorGrouping": {
+    "Name": "Connector Grouping",
+    "Description": "Connectors should be grouped under specific folders based on their types",
+    "Enabled": true,
+    "Severity": "Warn",
+    "ExpectedPath": "Global Objects/{ConnectorType}"
+  },
+  "QueueUtilization": {
+    "Name": "Queue Utilization",
+    "Description": "Queue type variable must be used for transaction tracking",
+    "Enabled": true,
+    "Severity": "Fail"
+  },
+  "PickWorkitem": {
+    "Name": "Pick Workitem",
+    "Description": "Pick Workitem executable item must be used in framework Get Workitem activity",
+    "Enabled": true,
+    "Severity": "Fail"
+  },
+  "UpdateWorkitem": {
+    "Name": "Update Workitem",
+    "Description": "Update Workitem executable item must be used in framework Process Workitem activity",
+    "Enabled": true,
+    "Severity": "Fail"
+  }
+}

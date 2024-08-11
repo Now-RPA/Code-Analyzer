@@ -1,0 +1,55 @@
+﻿{
+  "ActivityStartLog": {
+    "Name": "Activity Start Log",
+    "Description": "Start log is important to track the beginning of activity execution.",
+    "Enabled": true,
+    "Severity": "Warn",
+    "ExpectedLogMessage": "{ActivityName} started",
+    "AllowedLogLevels": ["INFO", "DEBUG"],
+    "RequireExactMatch": false,
+    "CaseSensitive": false
+  },
+  "ActivityEndLog": {
+    "Name": "Activity End Log",
+    "Description": "End log is important to track the completion of activity execution.",
+    "Enabled": true,
+    "Severity": "Warn",
+    "ExpectedLogMessage": "{ActivityName} completed",
+    "AllowedLogLevels": ["INFO", "DEBUG"],
+    "RequireExactMatch": false,
+    "CaseSensitive": false
+  },
+  "ExceptionLog": {
+    "Name": "Exception Logging",
+    "Description": "Logging exception messages in catch blocks helps in debugging and error tracking.",
+    "Enabled": true,
+    "Severity": "Fail",
+    "AllowedLogLevels": ["WARN", "ERROR", "EXCEPTION"]
+  },
+  "ActivityErrorHandling": {
+    "Name": "Activity Error Handling",
+    "Description": "All activities should start with a Try-Catch block.",
+    "Enabled": true,
+    "Severity": "Fail"
+  },
+  "ErrorPortUtilization": {
+    "Name": "Error Port Utilization",
+    "Description": "On Error and Error Message port must be used for every try-catch block.",
+    "Enabled": true,
+    "Severity": "Fail",
+    "RequireErrorMessagePortMapping": true
+  },
+  "NonEmptyLogs": {
+    "Name": "Non-Empty Logs",
+    "Description": "Logging is essential for diagnostics and execution tracking.",
+    "Enabled": true,
+    "Severity": "Warn",
+    "MinLogLength": 3
+  },
+  "ComponentErrorHandlerComment": {
+    "Name": "Component Error Handler Comment",
+    "Description": "Components with modified error handling must have a comment.",
+    "Enabled": true,
+    "Severity": "Warn"
+  }
+}
