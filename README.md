@@ -27,7 +27,7 @@ The rule sets can be configured by modifying the JSON configuration files locate
 
 `Diagnostics.json`
 `Framework.json`
-`Code Quality.json`
+`CodeQuality.json`
 ### Interactive Mode
 Run the application directly without any arguments to start in interactive mode:
 Follow the on-screen prompts to analyze your iBot files.
@@ -74,24 +74,7 @@ In case emojis are not visible in the Code Analyzer interface:
 
 These steps ensure proper display of emojis and Unicode characters, enhancing the visual experience of the Code Analyzer tool.
 ## Building Project
-Ensure you have .NET 8.0 SDK or later installed on your system.
-Clone this repository:
-```
-git clone https://github.com/Bot-Dev-RPA/Now-RPA-Code-Analyzer.git
-```
-Navigate to the project directory:
-```
-cd CodeAnalyzer
-```
 Build the project:
 ```
 dotnet build
-```
-Run the project:
-```
-dotnet run --project=CodeAnalyzer
-```
-Publish the project:
-```
-dotnet publish -c Release -r win-x64 -p:PublishSingleFile=true -p:PublishTrimmed=true --self-contained true
 ```
