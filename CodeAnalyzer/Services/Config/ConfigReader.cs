@@ -5,10 +5,11 @@ namespace CodeAnalyzer.Services.Config;
 public class ConfigReader
 {
     private readonly IConfiguration _configuration;
+
     public ConfigReader(string configPath)
     {
         var builder = new ConfigurationBuilder()
-            .AddJsonFile(configPath, optional: false, reloadOnChange: true);
+            .AddJsonFile(configPath, false, true);
 
         _configuration = builder.Build();
     }

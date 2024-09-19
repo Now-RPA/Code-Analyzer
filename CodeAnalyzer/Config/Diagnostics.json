@@ -5,7 +5,10 @@
     "Enabled": true,
     "Severity": "Warn",
     "ExpectedLogMessage": "{ActivityName} started",
-    "AllowedLogLevels": ["INFO", "DEBUG"],
+    "AllowedLogLevels": [
+      "INFO",
+      "DEBUG"
+    ],
     "RequireExactMatch": false,
     "CaseSensitive": false
   },
@@ -15,7 +18,10 @@
     "Enabled": true,
     "Severity": "Warn",
     "ExpectedLogMessage": "{ActivityName} completed",
-    "AllowedLogLevels": ["INFO", "DEBUG"],
+    "AllowedLogLevels": [
+      "INFO",
+      "DEBUG"
+    ],
     "RequireExactMatch": false,
     "CaseSensitive": false
   },
@@ -24,7 +30,11 @@
     "Description": "Logging exception messages in catch blocks helps in debugging and error tracking.",
     "Enabled": true,
     "Severity": "Fail",
-    "AllowedLogLevels": ["WARN", "ERROR", "EXCEPTION"]
+    "AllowedLogLevels": [
+      "WARN",
+      "ERROR",
+      "EXCEPTION"
+    ]
   },
   "ActivityErrorHandling": {
     "Name": "Activity Error Handling",

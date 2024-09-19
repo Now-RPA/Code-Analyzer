@@ -4,15 +4,22 @@
     "Description": "Activities with an 'Open' method must have a corresponding 'Close' method.",
     "Enabled": true,
     "Severity": "Warn",
-    "OpenMethodPrefixes": ["Open", "Load"],
-    "CloseMethodPrefixes": ["Close"]
+    "OpenMethodPrefixes": [
+      "Open",
+      "Load"
+    ],
+    "CloseMethodPrefixes": [
+      "Close"
+    ]
   },
   "HardcodedDelay": {
     "Name": "Hardcoded Delay",
     "Description": "Activities should not use hardcoded delays (WaitForTime)",
     "Enabled": true,
     "Severity": "Fail",
-    "ProhibitedTypes": ["WaitForTime"]
+    "ProhibitedTypes": [
+      "WaitForTime"
+    ]
   },
   "ModifiedDelayProperties": {
     "Name": "Modified Delay Properties",
@@ -41,7 +48,9 @@
     "Description": "Enabled Windows Screen Element locators should not use path, and enabled match rules should not use path or index",
     "Enabled": true,
     "Severity": "Warn",
-    "ProhibitedLocators": ["Path"]
+    "ProhibitedLocators": [
+      "Path"
+    ]
   },
   "ChromeScreenRules": {
     "Name": "Chrome Screen Rules",
@@ -54,7 +63,9 @@
     "Description": "Enabled Chrome Screen Element locators and JS match rules should not contain digits, and JS match rules should not use the Index property",
     "Enabled": true,
     "Severity": "Warn",
-    "ProhibitedJsMatchRuleProperties": ["Index"]
+    "ProhibitedJsMatchRuleProperties": [
+      "Index"
+    ]
   },
   "DataTransformUsage": {
     "Name": "Data Transform Usage",

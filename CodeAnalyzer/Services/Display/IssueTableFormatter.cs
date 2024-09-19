@@ -14,7 +14,8 @@ public static class IssueTableFormatter
 
         if (relevantResults.Count == 0)
         {
-            yield return new Table().AddColumn("Result").AddRow(new Markup("[green]No issues found. All rules passed![/]"));
+            yield return new Table().AddColumn("Result")
+                .AddRow(new Markup("[green]No issues found. All rules passed![/]"));
             yield break;
         }
 
@@ -31,13 +32,10 @@ public static class IssueTableFormatter
 
             var orderedResults = categoryGroup.OrderBy(r => r.Source.Length).ThenBy(r => r.Status);
 
-            bool firstRow = true;
+            var firstRow = true;
             foreach (var result in orderedResults)
             {
-                if (!firstRow)
-                {
-                    table.AddEmptyRow();
-                }
+                if (!firstRow) table.AddEmptyRow();
 
                 var rowColor = result.Status switch
                 {
@@ -62,8 +60,8 @@ public static class IssueTableFormatter
 
     public static string GetIssueSummary(List<RuleCheckResult> results)
     {
-        int totalFailCount = results.Count(r => r.Status == RuleCheckStatus.Fail);
-        int totalWarnCount = results.Count(r => r.Status == RuleCheckStatus.Warn);
+        var totalFailCount = results.Count(r => r.Status == RuleCheckStatus.Fail);
+        var totalWarnCount = results.Count(r => r.Status == RuleCheckStatus.Warn);
         return $"[bold]Overall Summary:[/] [red]{totalFailCount} Failed[/], [yellow]{totalWarnCount} Warnings[/]";
     }
 }

@@ -2,8 +2,7 @@
 
 public record Rule
 {
-    public string Category { get; set; } = String.Empty;
-    public string Name { get; set; } = String.Empty;
-    public string Description { get; set; } = String.Empty;
-
+    public string Category { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
 }

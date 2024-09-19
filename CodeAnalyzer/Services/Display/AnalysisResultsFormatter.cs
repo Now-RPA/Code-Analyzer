@@ -17,18 +17,18 @@ public class AnalysisResultsFormatter
         table.AddColumn(new TableColumn("Score").Width(10).Centered());
 
         double overallScore = 0;
-        int categoryCount = 0;
-        int totalPass = 0;
-        int totalWarn = 0;
-        int totalFail = 0;
+        var categoryCount = 0;
+        var totalPass = 0;
+        var totalWarn = 0;
+        var totalFail = 0;
 
         foreach (var group in groupedResults)
         {
-            int pass = group.Count(r => r.Status == RuleCheckStatus.Pass);
-            int warn = group.Count(r => r.Status == RuleCheckStatus.Warn);
-            int fail = group.Count(r => r.Status == RuleCheckStatus.Fail);
-            int total = pass + warn + fail;
-            double categoryScore = (pass * 1.0 + warn * 0.5) / total * 100;
+            var pass = group.Count(r => r.Status == RuleCheckStatus.Pass);
+            var warn = group.Count(r => r.Status == RuleCheckStatus.Warn);
+            var fail = group.Count(r => r.Status == RuleCheckStatus.Fail);
+            var total = pass + warn + fail;
+            var categoryScore = (pass * 1.0 + warn * 0.5) / total * 100;
             overallScore += categoryScore;
             categoryCount++;
 
@@ -64,7 +64,7 @@ public class AnalysisResultsFormatter
 
     public static string GetCodeQualityRating(double overallScore)
     {
-        string rating = overallScore switch
+        var rating = overallScore switch
         {
             >= 95 => "Excellent",
             >= 85 => "Good",

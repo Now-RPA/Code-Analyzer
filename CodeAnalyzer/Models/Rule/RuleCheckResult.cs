@@ -9,9 +9,8 @@ public enum RuleCheckStatus
 
 public record RuleCheckResult
 {
-
-    public Rule Rule { get; set; } = new Rule();
+    public Rule Rule { get; set; } = new();
     public RuleCheckStatus Status { get; set; }
-    public string Source { get; set; } = String.Empty;
-    public string Comments { get; set; } = String.Empty;
+    public string Source { get; set; } = string.Empty;
+    public string Comments { get; set; } = string.Empty;
 }

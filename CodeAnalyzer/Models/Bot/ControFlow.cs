@@ -7,6 +7,7 @@ public record ControlIn
     public bool Visibility { get; set; }
     public bool AllowDelete { get; set; }
 }
+
 public record ControlOut
 {
     public Guid Id { get; set; }

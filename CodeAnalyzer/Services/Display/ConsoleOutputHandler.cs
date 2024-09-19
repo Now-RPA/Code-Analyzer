@@ -1,5 +1,4 @@
-﻿
-using Spectre.Console;
+﻿using Spectre.Console;
 
 namespace CodeAnalyzer.Services.Display;
 
@@ -20,37 +19,36 @@ public static class ConsoleOutputHandler
     {
         AnsiConsole.WriteLine();
         AnsiConsole.MarkupLine($":stop_sign:[red] {Markup.Escape(message)}[/]");
-        if (waitForKey)
-        {
-            Console.ReadKey(true);
-        }
+        if (waitForKey) Console.ReadKey(true);
     }
+
     public static void DisplayStackTrace(Exception ex, bool waitForKey = false)
     {
         AnsiConsole.WriteLine();
         AnsiConsole.WriteException(ex);
-        if (waitForKey)
-        {
-            Console.ReadKey(true);
-        }
+        if (waitForKey) Console.ReadKey(true);
     }
+
     public static void DisplayInfo(string message, int delay = 1000)
     {
         AnsiConsole.WriteLine();
         AnsiConsole.MarkupLine($"[green]{Markup.Escape(message)}[/]");
         Thread.Sleep(delay);
     }
+
     public static void DisplayEscapedInfo(string escapedMessage, int delay = 1000)
     {
         AnsiConsole.WriteLine();
         AnsiConsole.MarkupLine($"[green]{escapedMessage}[/]");
         Thread.Sleep(delay);
     }
+
     public static void DisplayLabel(string message)
     {
         AnsiConsole.WriteLine();
         AnsiConsole.MarkupLine($"[SteelBlue1]{Markup.Escape(message)}[/]");
     }
+
     public static void DisplayEscapedLabel(string escapedMessage)
     {
         AnsiConsole.WriteLine();

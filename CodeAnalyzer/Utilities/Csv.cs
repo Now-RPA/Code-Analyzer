@@ -1,6 +1,6 @@
-﻿using CodeAnalyzer.Models.Rule;
-using System.Data;
+﻿using System.Data;
 using System.Text;
+using CodeAnalyzer.Models.Rule;
 
 namespace CodeAnalyzer.Utilities;
 
@@ -18,7 +18,7 @@ public static class Csv
 
         foreach (var ruleCheckResult in ruleCheckResults)
         {
-            DataRow row = dataTable.NewRow();
+            var row = dataTable.NewRow();
             row["Category"] = ruleCheckResult.Rule.Category;
             row["Source"] = ruleCheckResult.Source;
             row["Name"] = ruleCheckResult.Rule.Name;
@@ -34,14 +34,14 @@ public static class Csv
     public static void WriteDataTableToCsv(List<RuleCheckResult> ruleCheckResults, string filePath)
     {
         StringBuilder sb = new();
-        DataTable dataTable = ConvertToDataTable(ruleCheckResults);
+        var dataTable = ConvertToDataTable(ruleCheckResults);
 
-        IEnumerable<string> columnNames = dataTable.Columns.Cast<DataColumn>().Select(column => EscapeCsvField(column.ColumnName));
+        var columnNames = dataTable.Columns.Cast<DataColumn>().Select(column => EscapeCsvField(column.ColumnName));
         sb.AppendLine(string.Join(",", columnNames));
 
         foreach (DataRow row in dataTable.Rows)
         {
-            IEnumerable<string> fields = row.ItemArray.Select(field => EscapeCsvField(field?.ToString() ?? string.Empty));
+            var fields = row.ItemArray.Select(field => EscapeCsvField(field?.ToString() ?? string.Empty));
             sb.AppendLine(string.Join(",", fields));
         }
 
@@ -50,20 +50,12 @@ public static class Csv
 
     private static string EscapeCsvField(string field)
     {
-        if (string.IsNullOrEmpty(field))
-        {
-            return string.Empty;
-        }
+        if (string.IsNullOrEmpty(field)) return string.Empty;
 
-        if (field.Contains('"'))
-        {
-            field = field.Replace("\"", "\"\"");
-        }
+        if (field.Contains('"')) field = field.Replace("\"", "\"\"");
 
         if (field.Contains(',') || field.Contains('"') || field.Contains('\n') || field.Contains('\r'))
-        {
             field = $"\"{field}\"";
-        }
 
         return field;
     }

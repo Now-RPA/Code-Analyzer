@@ -1,17 +1,16 @@
-﻿using CodeAnalyzer.Interfaces;
+﻿using System.Text.RegularExpressions;
+using CodeAnalyzer.Interfaces;
 using CodeAnalyzer.Models.Bot;
 using CodeAnalyzer.Models.Rule;
 using CodeAnalyzer.Services.Config;
-using System.Text.RegularExpressions;
 
 namespace CodeAnalyzer.Services.RuleChecker;
 
 public class CodeQualityRuleChecker : IRuleChecker
 {
-    public string Category => "Code Quality";
+    private static readonly Regex HasDigitRegex = new(@"\d", RegexOptions.Compiled);
     private readonly ConfigReader _config;
     private readonly Dictionary<string, Func<Process, Rule, List<RuleCheckResult>>> _rules;
-    private static readonly Regex HasDigitRegex = new(@"\d", RegexOptions.Compiled);
 
     public CodeQualityRuleChecker()
     {
@@ -31,11 +30,12 @@ public class CodeQualityRuleChecker : IRuleChecker
         };
     }
 
+    public string Category => "Code Quality";
+
     public List<RuleCheckResult> CheckRules(Process process)
     {
         List<RuleCheckResult> results = [];
         foreach (var ruleEntry in _rules)
-        {
             if (_config.GetParameter(ruleEntry.Key, "Enabled", true))
             {
                 var rule = new Rule
@@ -46,32 +46,36 @@ public class CodeQualityRuleChecker : IRuleChecker
                 };
                 results.AddRange(ruleEntry.Value(process, rule));
             }
-        }
+
         return results;
     }
 
     private List<RuleCheckResult> CheckOpenCloseMethods(Process process, Rule rule)
     {
         var severity = _config.GetParameter("OpenCloseMethodPair", "Severity", "Warn");
-        var openMethodPrefixes = _config.GetStringArrayParameter("OpenCloseMethodPair", "OpenMethodPrefixes", ["Open", "Load"]);
-        var closeMethodPrefixes = _config.GetStringArrayParameter("OpenCloseMethodPair", "CloseMethodPrefixes", ["Close"]);
+        var openMethodPrefixes =
+            _config.GetStringArrayParameter("OpenCloseMethodPair", "OpenMethodPrefixes", ["Open", "Load"]);
+        var closeMethodPrefixes =
+            _config.GetStringArrayParameter("OpenCloseMethodPair", "CloseMethodPrefixes", ["Close"]);
 
         List<RuleCheckResult> ruleCheckResults = [];
 
         foreach (var activity in process.Activities)
         {
             var openMethods = activity.Items.OfType<ExecutableItem>()
-                .Where(item => item.MethodName != null && openMethodPrefixes.Any(prefix => item.MethodName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)))
+                .Where(item => item.MethodName != null && openMethodPrefixes.Any(prefix =>
+                    item.MethodName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)))
                 .ToList();
             var closeMethods = activity.Items.OfType<ExecutableItem>()
-                .Where(item => item.MethodName != null && closeMethodPrefixes.Any(prefix => item.MethodName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)))
+                .Where(item => item.MethodName != null && closeMethodPrefixes.Any(prefix =>
+                    item.MethodName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)))
                 .ToList();
 
             // Check for Open methods without corresponding Close methods
             foreach (var openMethod in openMethods)
             {
-                string connectorInfo = GetConnectorInfo(openMethod.ObjectId);
-                bool hasMatchingCloseMethod = closeMethods.Any(item => item.ObjectId == openMethod.ObjectId);
+                var connectorInfo = GetConnectorInfo(openMethod.ObjectId);
+                var hasMatchingCloseMethod = closeMethods.Any(item => item.ObjectId == openMethod.ObjectId);
                 RuleCheckResult ruleCheckResult = new()
                 {
                     Rule = rule,
@@ -79,7 +83,7 @@ public class CodeQualityRuleChecker : IRuleChecker
                     Status = hasMatchingCloseMethod ? RuleCheckStatus.Pass : ParseSeverity(severity),
                     Comments = hasMatchingCloseMethod
                         ? $"Activity '{activity.Name}' has a matching 'Close' method for the 'Open' method of {connectorInfo}."
-                        : $"Activity '{activity.Name}' is missing a 'Close' method for the 'Open' method of {connectorInfo}.",
+                        : $"Activity '{activity.Name}' is missing a 'Close' method for the 'Open' method of {connectorInfo}."
                 };
                 ruleCheckResults.Add(ruleCheckResult);
             }
@@ -87,8 +91,8 @@ public class CodeQualityRuleChecker : IRuleChecker
             // Check for Close methods without corresponding Open methods
             foreach (var closeMethod in closeMethods)
             {
-                string connectorInfo = GetConnectorInfo(closeMethod.ObjectId);
-                bool hasMatchingOpenMethod = openMethods.Any(item => item.ObjectId == closeMethod.ObjectId);
+                var connectorInfo = GetConnectorInfo(closeMethod.ObjectId);
+                var hasMatchingOpenMethod = openMethods.Any(item => item.ObjectId == closeMethod.ObjectId);
                 if (!hasMatchingOpenMethod)
                 {
                     RuleCheckResult ruleCheckResult = new()
@@ -96,12 +100,14 @@ public class CodeQualityRuleChecker : IRuleChecker
                         Rule = rule,
                         Source = $"{activity.RootPath}/{activity.Name}",
                         Status = ParseSeverity(severity),
-                        Comments = $"Activity '{activity.Name}' has a 'Close' method without a corresponding 'Open' method for {connectorInfo}.",
+                        Comments =
+                            $"Activity '{activity.Name}' has a 'Close' method without a corresponding 'Open' method for {connectorInfo}."
                     };
                     ruleCheckResults.Add(ruleCheckResult);
                 }
             }
         }
+
         return ruleCheckResults;
 
         string GetConnectorInfo(Guid? objectId)
@@ -120,7 +126,7 @@ public class CodeQualityRuleChecker : IRuleChecker
 
         foreach (var activity in process.Activities)
         {
-            bool hasHardcodedDelay = activity.Items.OfType<ExecutableItem>()
+            var hasHardcodedDelay = activity.Items.OfType<ExecutableItem>()
                 .Any(item => prohibitedTypes.Contains(item.Type));
 
             RuleCheckResult ruleCheckResult = new()
@@ -130,7 +136,7 @@ public class CodeQualityRuleChecker : IRuleChecker
                 Status = hasHardcodedDelay ? ParseSeverity(severity) : RuleCheckStatus.Pass,
                 Comments = hasHardcodedDelay
                     ? $"Activity '{activity.Name}' uses a hardcoded delay ({string.Join(", ", prohibitedTypes)})."
-                    : $"Activity '{activity.Name}' does not use hardcoded delays.",
+                    : $"Activity '{activity.Name}' does not use hardcoded delays."
             };
 
             ruleCheckResults.Add(ruleCheckResult);
@@ -152,9 +158,9 @@ public class CodeQualityRuleChecker : IRuleChecker
         {
             foreach (var designItem in activity.Items.OfType<ExecutableItem>())
             {
-                bool isModified = designItem.BeforeDelay > allowedBeforeDelay ||
-                                  designItem.AfterDelay > allowedAfterDelay ||
-                                  designItem.EnableTimeout != allowedEnableTimeout;
+                var isModified = designItem.BeforeDelay > allowedBeforeDelay ||
+                                 designItem.AfterDelay > allowedAfterDelay ||
+                                 designItem.EnableTimeout != allowedEnableTimeout;
                 var name = string.IsNullOrWhiteSpace(designItem.Name) ? designItem.Type : designItem.Name;
                 if (isModified)
                 {
@@ -213,7 +219,9 @@ public class CodeQualityRuleChecker : IRuleChecker
                 continue;
             }
 
-            bool hasNonEmptyComment = commentItems.All(commentItem => commentItem.Name != null && !string.IsNullOrWhiteSpace(commentItem.Name) && commentItem.Name.Length >= minCommentLength);
+            var hasNonEmptyComment = commentItems.All(commentItem =>
+                commentItem.Name != null && !string.IsNullOrWhiteSpace(commentItem.Name) &&
+                commentItem.Name.Length >= minCommentLength);
 
             RuleCheckResult ruleCheckResult = new()
             {
@@ -245,7 +253,6 @@ public class CodeQualityRuleChecker : IRuleChecker
                 List<RuleCheckResult> screenViolations = [];
                 var enabledMatchRules = screen.MatchRules.Where(l => l.Enabled).ToList();
                 if (enabledMatchRules.Count == 0)
-                {
                     screenViolations.Add(new RuleCheckResult
                     {
                         Rule = rule,
@@ -253,9 +260,7 @@ public class CodeQualityRuleChecker : IRuleChecker
                         Status = RuleCheckStatus.Fail,
                         Comments = $"Windows Screen '{screen.Name}' has no match rules enabled."
                     });
-                }
                 foreach (var matchRule in enabledMatchRules)
-                {
                     if (matchRule is IndexMatchRule indexRule)
                     {
                         screenViolations.Add(new RuleCheckResult
@@ -269,35 +274,28 @@ public class CodeQualityRuleChecker : IRuleChecker
                     else if (matchRule is StringComparerMatchRule stringRule && stringRule.Comparer != null)
                     {
                         if (stringRule.Comparer.Type.Equals("Equals", StringComparison.InvariantCultureIgnoreCase))
-                        {
                             screenViolations.Add(new RuleCheckResult
                             {
                                 Rule = rule,
                                 Source = $"{screen.RootPath}/{screen.Name}",
                                 Status = ParseSeverity(severity),
-                                Comments = $"Windows Screen '{screen.Name}' uses strict 'Equals' comparison: {GetRuleType(stringRule.Type)} {stringRule.Comparer.Type} '{stringRule.Comparer.ComparisonValue}'."
+                                Comments =
+                                    $"Windows Screen '{screen.Name}' uses strict 'Equals' comparison: {GetRuleType(stringRule.Type)} {stringRule.Comparer.Type} '{stringRule.Comparer.ComparisonValue}'."
                             });
-                        }
                         if (ContainsDigit(stringRule.Comparer.ComparisonValue))
-                        {
                             screenViolations.Add(new RuleCheckResult
                             {
                                 Rule = rule,
                                 Source = $"{screen.RootPath}/{screen.Name}",
                                 Status = ParseSeverity(severity),
-                                Comments = $"Windows Screen '{screen.Name}' match rule contains number: {GetRuleType(stringRule.Type)} {stringRule.Comparer.Type} '{stringRule.Comparer.ComparisonValue}'."
+                                Comments =
+                                    $"Windows Screen '{screen.Name}' match rule contains number: {GetRuleType(stringRule.Type)} {stringRule.Comparer.Type} '{stringRule.Comparer.ComparisonValue}'."
                             });
-                        }
                     }
 
-                }
-
                 if (screenViolations.Count > 0)
-                {
                     ruleCheckResults.AddRange(screenViolations);
-                }
                 else
-                {
                     ruleCheckResults.Add(new RuleCheckResult
                     {
                         Rule = rule,
@@ -305,9 +303,9 @@ public class CodeQualityRuleChecker : IRuleChecker
                         Status = RuleCheckStatus.Pass,
                         Comments = $"Windows Screen '{screen.Name}' follows all match rule best practices."
                     });
-                }
             }
         }
+
         return ruleCheckResults;
     }
 
@@ -332,30 +330,27 @@ public class CodeQualityRuleChecker : IRuleChecker
                     if (selectedLocator != null)
                     {
                         if (prohibitedLocators.Contains(selectedLocator.LocateBy, StringComparer.OrdinalIgnoreCase))
-                        {
                             screenViolations.Add(new RuleCheckResult
                             {
                                 Rule = rule,
                                 Source = $"{screen.RootPath}/{screen.Name}",
                                 Status = ParseSeverity(severity),
-                                Comments = $"Window element '{element.Name}' uses prohibited locator, {selectedLocator.LocateBy} = '{selectedLocator.Value}'."
+                                Comments =
+                                    $"Window element '{element.Name}' uses prohibited locator, {selectedLocator.LocateBy} = '{selectedLocator.Value}'."
                             });
-                        }
                         else if (ContainsDigit(selectedLocator.Value))
-                        {
                             screenViolations.Add(new RuleCheckResult
                             {
                                 Rule = rule,
                                 Source = $"{screen.RootPath}/{screen.Name}",
                                 Status = ParseSeverity(severity),
-                                Comments = $"Window element '{element.Name}' locator contains digit, {selectedLocator.LocateBy} = '{selectedLocator.Value}'."
+                                Comments =
+                                    $"Window element '{element.Name}' locator contains digit, {selectedLocator.LocateBy} = '{selectedLocator.Value}'."
                             });
-                        }
                     }
 
                     // Check match rules
                     foreach (var matchRule in element.MatchRules.Where(r => r.Enabled))
-                    {
                         if (matchRule is IndexMatchRule indexRule)
                         {
                             screenViolations.Add(new RuleCheckResult
@@ -363,74 +358,67 @@ public class CodeQualityRuleChecker : IRuleChecker
                                 Rule = rule,
                                 Source = $"{screen.RootPath}/{screen.Name}",
                                 Status = ParseSeverity(severity),
-                                Comments = $"Window Element '{element.Name}' uses an index match rule, Index = {indexRule.Index}."
+                                Comments =
+                                    $"Window Element '{element.Name}' uses an index match rule, Index = {indexRule.Index}."
                             });
                         }
                         else if (matchRule is StringComparerMatchRule stringRule && stringRule.Comparer is not null)
                         {
                             var matchRuleType = GetRuleType(stringRule.Type);
                             if (matchRuleType.Equals("PathMatchRule", StringComparison.OrdinalIgnoreCase))
-                            {
                                 screenViolations.Add(new RuleCheckResult
                                 {
                                     Rule = rule,
                                     Source = $"{screen.RootPath}/{screen.Name}",
                                     Status = ParseSeverity(severity),
-                                    Comments = $"Window element '{element.Name}' uses Path match rule, Path = '{stringRule.Comparer.ComparisonValue}'."
+                                    Comments =
+                                        $"Window element '{element.Name}' uses Path match rule, Path = '{stringRule.Comparer.ComparisonValue}'."
                                 });
-                            }
-                            else if (matchRuleType.Equals("NameMatchRule", StringComparison.OrdinalIgnoreCase) && ContainsDigit(stringRule.Comparer.ComparisonValue))
-                            {
+                            else if (matchRuleType.Equals("NameMatchRule", StringComparison.OrdinalIgnoreCase) &&
+                                     ContainsDigit(stringRule.Comparer.ComparisonValue))
                                 screenViolations.Add(new RuleCheckResult
                                 {
                                     Rule = rule,
                                     Source = $"{screen.RootPath}/{screen.Name}",
                                     Status = ParseSeverity(severity),
-                                    Comments = $"Window element '{element.Name}' contains digit in match rule, Name = '{stringRule.Comparer.ComparisonValue}'."
+                                    Comments =
+                                        $"Window element '{element.Name}' contains digit in match rule, Name = '{stringRule.Comparer.ComparisonValue}'."
                                 });
-                            }
                         }
                         else if (matchRule is ElementMatchRule elementRule)
                         {
                             if (ContainsDigit(elementRule.ElementType))
-                            {
                                 screenViolations.Add(new RuleCheckResult
                                 {
                                     Rule = rule,
                                     Source = $"{screen.RootPath}/{screen.Name}",
                                     Status = ParseSeverity(severity),
-                                    Comments = $"Window element '{element.Name}' contains digit in match rule, Type = '{elementRule.ElementType}'."
+                                    Comments =
+                                        $"Window element '{element.Name}' contains digit in match rule, Type = '{elementRule.ElementType}'."
                                 });
-                            }
                             if (ContainsDigit(elementRule.ElementId))
-                            {
                                 screenViolations.Add(new RuleCheckResult
                                 {
                                     Rule = rule,
                                     Source = $"{screen.RootPath}/{screen.Name}",
                                     Status = ParseSeverity(severity),
-                                    Comments = $"Window element '{element.Name}' contains digit in match rule, ID = '{elementRule.ElementId}'."
+                                    Comments =
+                                        $"Window element '{element.Name}' contains digit in match rule, ID = '{elementRule.ElementId}'."
                                 });
-                            }
                         }
-                    }
-
                 }
 
                 if (screenViolations.Count > 0)
-                {
                     ruleCheckResults.AddRange(screenViolations);
-                }
                 else
-                {
                     ruleCheckResults.Add(new RuleCheckResult
                     {
                         Rule = rule,
                         Source = $"{screen.RootPath}/{screen.Name}",
                         Status = RuleCheckStatus.Pass,
-                        Comments = $"All elements in Windows Screen '{screen.Name}' follow locator and match rule best practices."
+                        Comments =
+                            $"All elements in Windows Screen '{screen.Name}' follow locator and match rule best practices."
                     });
-                }
             }
         }
 
@@ -450,7 +438,6 @@ public class CodeQualityRuleChecker : IRuleChecker
                 List<RuleCheckResult> screenViolations = [];
                 var enabledMatchRules = screen.MatchRules.Where(l => l.Enabled).ToList();
                 if (enabledMatchRules.Count == 0)
-                {
                     screenViolations.Add(new RuleCheckResult
                     {
                         Rule = rule,
@@ -458,9 +445,7 @@ public class CodeQualityRuleChecker : IRuleChecker
                         Status = RuleCheckStatus.Fail,
                         Comments = $"Chrome Screen '{screen.Name}' has no match rules enabled."
                     });
-                }
                 foreach (var matchRule in enabledMatchRules)
-                {
                     if (matchRule is IndexMatchRule indexRule)
                     {
                         screenViolations.Add(new RuleCheckResult
@@ -474,34 +459,28 @@ public class CodeQualityRuleChecker : IRuleChecker
                     else if (matchRule is StringComparerMatchRule stringRule && stringRule.Comparer is not null)
                     {
                         if (stringRule.Comparer.Type.Equals("Equals", StringComparison.OrdinalIgnoreCase))
-                        {
                             screenViolations.Add(new RuleCheckResult
                             {
                                 Rule = rule,
                                 Source = $"{screen.RootPath}/{screen.Name}",
                                 Status = ParseSeverity(severity),
-                                Comments = $"Chrome Screen '{screen.Name}' uses strict 'Equals' comparison, {GetRuleType(stringRule.Type)} {stringRule.Comparer.Type} '{stringRule.Comparer.ComparisonValue}'."
+                                Comments =
+                                    $"Chrome Screen '{screen.Name}' uses strict 'Equals' comparison, {GetRuleType(stringRule.Type)} {stringRule.Comparer.Type} '{stringRule.Comparer.ComparisonValue}'."
                             });
-                        }
                         if (stringRule.Comparer.ComparisonValue.Any(char.IsDigit))
-                        {
                             screenViolations.Add(new RuleCheckResult
                             {
                                 Rule = rule,
                                 Source = $"{screen.RootPath}/{screen.Name}",
                                 Status = ParseSeverity(severity),
-                                Comments = $"Chrome Screen '{screen.Name}' match rule contains number: {GetRuleType(stringRule.Type)} {stringRule.Comparer.Type} '{stringRule.Comparer.ComparisonValue}'."
+                                Comments =
+                                    $"Chrome Screen '{screen.Name}' match rule contains number: {GetRuleType(stringRule.Type)} {stringRule.Comparer.Type} '{stringRule.Comparer.ComparisonValue}'."
                             });
-                        }
                     }
-                }
 
                 if (screenViolations.Count > 0)
-                {
                     ruleCheckResults.AddRange(screenViolations);
-                }
                 else
-                {
                     ruleCheckResults.Add(new RuleCheckResult
                     {
                         Rule = rule,
@@ -509,16 +488,17 @@ public class CodeQualityRuleChecker : IRuleChecker
                         Status = RuleCheckStatus.Pass,
                         Comments = $"Chrome Screen '{screen.Name}' follows all match rule best practices."
                     });
-                }
             }
         }
+
         return ruleCheckResults;
     }
 
     private List<RuleCheckResult> CheckChromeScreenElementLocatorsAndJsMatchRules(Process process, Rule rule)
     {
         var severity = _config.GetParameter("ChromeElementRules", "Severity", "Warn");
-        var prohibitedJsMatchRuleProperties = _config.GetStringArrayParameter("ChromeElementRules", "ProhibitedJsMatchRuleProperties", ["Index"]);
+        var prohibitedJsMatchRuleProperties =
+            _config.GetStringArrayParameter("ChromeElementRules", "ProhibitedJsMatchRuleProperties", ["Index"]);
 
         List<RuleCheckResult> ruleCheckResults = [];
         var uavs = process.Variables.OfType<UniversalAppConnector>();
@@ -534,57 +514,50 @@ public class CodeQualityRuleChecker : IRuleChecker
                     // Check locators
                     var selectedLocator = element.SelectedLocator;
                     if (selectedLocator != null && ContainsDigit(selectedLocator.Value))
-                    {
                         screenViolations.Add(new RuleCheckResult
                         {
                             Rule = rule,
                             Source = $"{screen.RootPath}/{screen.Name}",
                             Status = ParseSeverity(severity),
-                            Comments = $"Chrome element '{element.Name}' locator contains digit, {selectedLocator.LocateBy} = '{selectedLocator.Value}'."
+                            Comments =
+                                $"Chrome element '{element.Name}' locator contains digit, {selectedLocator.LocateBy} = '{selectedLocator.Value}'."
                         });
-                    }
 
                     // Check JS match rules
                     foreach (var jsMatchRule in element.JsMatchRules.Where(r => r.Enabled))
-                    {
                         if (jsMatchRule.Type.Equals("Property", StringComparison.OrdinalIgnoreCase) &&
-                            prohibitedJsMatchRuleProperties.Contains(jsMatchRule.Name, StringComparer.OrdinalIgnoreCase))
-                        {
+                            prohibitedJsMatchRuleProperties.Contains(jsMatchRule.Name,
+                                StringComparer.OrdinalIgnoreCase))
                             screenViolations.Add(new RuleCheckResult
                             {
                                 Rule = rule,
                                 Source = $"{screen.RootPath}/{screen.Name}",
                                 Status = ParseSeverity(severity),
-                                Comments = $"Chrome element '{element.Name}' uses prohibited JS match rule property: {jsMatchRule.Name} = {jsMatchRule.Value}."
+                                Comments =
+                                    $"Chrome element '{element.Name}' uses prohibited JS match rule property: {jsMatchRule.Name} = {jsMatchRule.Value}."
                             });
-                        }
                         else if (ContainsDigit(jsMatchRule.Value))
-                        {
                             screenViolations.Add(new RuleCheckResult
                             {
                                 Rule = rule,
                                 Source = $"{screen.RootPath}/{screen.Name}",
                                 Status = ParseSeverity(severity),
-                                Comments = $"Chrome element '{element.Name}' JS match rule contains digit: {jsMatchRule.Name} {jsMatchRule.Comparer} '{jsMatchRule.Value}'."
+                                Comments =
+                                    $"Chrome element '{element.Name}' JS match rule contains digit: {jsMatchRule.Name} {jsMatchRule.Comparer} '{jsMatchRule.Value}'."
                             });
-                        }
-                    }
                 }
 
                 if (screenViolations.Count > 0)
-                {
                     ruleCheckResults.AddRange(screenViolations);
-                }
                 else
-                {
                     ruleCheckResults.Add(new RuleCheckResult
                     {
                         Rule = rule,
                         Source = $"{screen.RootPath}/{screen.Name}",
                         Status = RuleCheckStatus.Pass,
-                        Comments = $"All elements in Chrome Screen '{screen.Name}' follow locator and JS match rule best practices."
+                        Comments =
+                            $"All elements in Chrome Screen '{screen.Name}' follow locator and JS match rule best practices."
                     });
-                }
             }
         }
 
@@ -595,62 +568,54 @@ public class CodeQualityRuleChecker : IRuleChecker
     {
         var severity = _config.GetParameter("DataTransformUsage", "Severity", "Warn");
         List<RuleCheckResult> ruleCheckResults = [];
-        bool foundDataTransform = false;
+        var foundDataTransform = false;
 
         foreach (var activity in process.Activities)
         {
             var executableItems = activity.Items.OfType<ExecutableItem>();
             foreach (var item in executableItems)
-            {
                 if (item.DataTransforms.Count > 0)
                 {
                     foundDataTransform = true;
                     foreach (var dataTransform in item.DataTransforms)
-                    {
                         if (dataTransform.HasModifiedScript)
                         {
                             if (dataTransform.Enabled)
-                            {
                                 ruleCheckResults.Add(new RuleCheckResult
                                 {
                                     Rule = rule,
                                     Source = $"{activity.RootPath}/{activity.Name}",
                                     Status = RuleCheckStatus.Pass,
-                                    Comments = $"Data transform in '{(string.IsNullOrEmpty(item.Name) ? item.Type : item.Name)}' has a valid script and is enabled."
+                                    Comments =
+                                        $"Data transform in '{(string.IsNullOrEmpty(item.Name) ? item.Type : item.Name)}' has a valid script and is enabled."
                                 });
-                            }
                             else
-                            {
                                 ruleCheckResults.Add(new RuleCheckResult
                                 {
                                     Rule = rule,
                                     Source = $"{activity.RootPath}/{activity.Name}",
                                     Status = ParseSeverity(severity),
-                                    Comments = $"Data transform in '{(string.IsNullOrEmpty(item.Name) ? item.Type : item.Name)}' has a valid script but is not enabled."
+                                    Comments =
+                                        $"Data transform in '{(string.IsNullOrEmpty(item.Name) ? item.Type : item.Name)}' has a valid script but is not enabled."
                                 });
-                            }
                         }
                         else
                         {
                             if (dataTransform.Enabled)
-                            {
                                 ruleCheckResults.Add(new RuleCheckResult
                                 {
                                     Rule = rule,
                                     Source = $"{activity.RootPath}/{activity.Name}",
                                     Status = ParseSeverity(severity),
-                                    Comments = $"Data transform in '{(string.IsNullOrEmpty(item.Name) ? item.Type : item.Name)}' has invalid/unmodified script and is enabled."
+                                    Comments =
+                                        $"Data transform in '{(string.IsNullOrEmpty(item.Name) ? item.Type : item.Name)}' has invalid/unmodified script and is enabled."
                                 });
-                            }
                         }
-                    }
                 }
-            }
         }
 
         // If no design items with data transforms were found, add a passing result
         if (!foundDataTransform)
-        {
             ruleCheckResults.Add(new RuleCheckResult
             {
                 Rule = rule,
@@ -658,7 +623,6 @@ public class CodeQualityRuleChecker : IRuleChecker
                 Status = RuleCheckStatus.Pass,
                 Comments = "No design items with data transforms found in the process"
             });
-        }
 
         return ruleCheckResults;
     }
@@ -672,10 +636,10 @@ public class CodeQualityRuleChecker : IRuleChecker
     {
         const string prefix = ".";
 
-        int lastIndex = ruleType.ToLower().LastIndexOf(prefix, StringComparison.InvariantCultureIgnoreCase);
+        var lastIndex = ruleType.ToLower().LastIndexOf(prefix, StringComparison.InvariantCultureIgnoreCase);
         if (lastIndex != -1)
         {
-            string result = ruleType.Substring(lastIndex + prefix.Length);
+            var result = ruleType.Substring(lastIndex + prefix.Length);
             return result.Trim();
         }
 
@@ -688,7 +652,7 @@ public class CodeQualityRuleChecker : IRuleChecker
         {
             "fail" => RuleCheckStatus.Fail,
             "warn" => RuleCheckStatus.Warn,
-            _ => RuleCheckStatus.Warn,
+            _ => RuleCheckStatus.Warn
         };
     }
 }

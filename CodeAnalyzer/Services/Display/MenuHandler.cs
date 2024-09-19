@@ -8,21 +8,16 @@ public static class MenuHandler
 {
     public static void DisplayMainMenu(List<RuleCheckResult> results, Process process)
     {
-        bool exit = false;
+        var exit = false;
         while (!exit)
         {
             ConsoleOutputHandler.DisplayTitle("Analysis Results");
             var choice = AnsiConsole.Prompt(
                 new SelectionPrompt<string>()
                     .Title("What would you like to view?")
-                    .HighlightStyle(new Style(foreground: Color.SteelBlue1))
+                    .HighlightStyle(new Style(Color.SteelBlue1))
                     .PageSize(10)
-                    .AddChoices([
-                        "📊 Summary",
-                        "🗂️ Issues Report",
-                        "🏗️ Bot Structure",
-                        "🔙 Main Menu"
-                    ]));
+                    .AddChoices("📊 Summary", "🗂️ Issues Report", "🏗️ Bot Structure", "🔙 Main Menu"));
 
             switch (choice)
             {

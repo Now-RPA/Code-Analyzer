@@ -65,6 +65,7 @@ public record CommentConnection : AbstractDesignItem
     public Guid SinkComponentId { get; set; }
     public Guid SinkPortId { get; set; }
 }
+
 public record DataTransform
 {
     public Guid Id { get; set; }
