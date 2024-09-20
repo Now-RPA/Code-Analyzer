@@ -18,7 +18,7 @@ public class CodeQualityRuleChecker : IRuleChecker
                   throw new InvalidOperationException("CodeQuality config not initialized");
         _rules = new Dictionary<string, Func<Process, Rule, List<RuleCheckResult>>>
         {
-            { "OpenCloseMethodPair", CheckOpenCloseMethods },
+            { "OpenCloseMethodPair", CheckOpenCloseConnectorMethods },
             { "HardcodedDelay", CheckHardcodedDelays },
             { "ModifiedDelayProperties", CheckModifiedDelayProperties },
             { "Comments", CheckNonEmptyComments },
@@ -50,11 +50,11 @@ public class CodeQualityRuleChecker : IRuleChecker
         return results;
     }
 
-    private List<RuleCheckResult> CheckOpenCloseMethods(Process process, Rule rule)
+    private List<RuleCheckResult> CheckOpenCloseConnectorMethods(Process process, Rule rule)
     {
         var severity = _config.GetParameter("OpenCloseMethodPair", "Severity", "Warn");
         var openMethodPrefixes =
-            _config.GetStringArrayParameter("OpenCloseMethodPair", "OpenMethodPrefixes", ["Open", "Load"]);
+            _config.GetStringArrayParameter("OpenCloseMethodPair", "OpenMethodPrefixes", ["Open", "Load", "SetAccount"]);
         var closeMethodPrefixes =
             _config.GetStringArrayParameter("OpenCloseMethodPair", "CloseMethodPrefixes", ["Close"]);
 
@@ -63,12 +63,14 @@ public class CodeQualityRuleChecker : IRuleChecker
         foreach (var activity in process.Activities)
         {
             var openMethods = activity.Items.OfType<ExecutableItem>()
-                .Where(item => item.MethodName != null && openMethodPrefixes.Any(prefix =>
-                    item.MethodName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)))
+                .Where(item => item.Type.Equals("AutxMethod") && item.MethodName != null && openMethodPrefixes.Any(
+                    prefix =>
+                        item.MethodName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)))
                 .ToList();
             var closeMethods = activity.Items.OfType<ExecutableItem>()
-                .Where(item => item.MethodName != null && closeMethodPrefixes.Any(prefix =>
-                    item.MethodName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)))
+                .Where(item => item.Type.Equals("AutxMethod") && item.MethodName != null && closeMethodPrefixes.Any(
+                    prefix =>
+                        item.MethodName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)))
                 .ToList();
 
             // Check for Open methods without corresponding Close methods
@@ -280,7 +282,8 @@ public class CodeQualityRuleChecker : IRuleChecker
                                 Source = $"{screen.RootPath}/{screen.Name}",
                                 Status = ParseSeverity(severity),
                                 Comments =
-                                    $"Windows Screen '{screen.Name}' uses strict 'Equals' comparison: {GetRuleType(stringRule.Type)} {stringRule.Comparer.Type} '{stringRule.Comparer.ComparisonValue}'."
+                                    $"Windows Screen '{screen.Name}' uses strict 'Equals' comparison:" +
+                                    $" {GetRuleType(stringRule.Type)} {stringRule.Comparer.Type} '{stringRule.Comparer.ComparisonValue}'."
                             });
                         if (ContainsDigit(stringRule.Comparer.ComparisonValue))
                             screenViolations.Add(new RuleCheckResult
@@ -289,7 +292,8 @@ public class CodeQualityRuleChecker : IRuleChecker
                                 Source = $"{screen.RootPath}/{screen.Name}",
                                 Status = ParseSeverity(severity),
                                 Comments =
-                                    $"Windows Screen '{screen.Name}' match rule contains number: {GetRuleType(stringRule.Type)} {stringRule.Comparer.Type} '{stringRule.Comparer.ComparisonValue}'."
+                                    $"Windows Screen '{screen.Name}' match rule contains number:" +
+                                    $" {GetRuleType(stringRule.Type)} {stringRule.Comparer.Type} '{stringRule.Comparer.ComparisonValue}'."
                             });
                     }
 

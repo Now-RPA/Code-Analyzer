@@ -59,7 +59,7 @@ public class DiagnosticsRuleChecker : IRuleChecker
         var caseSensitive = _config.GetParameter("ActivityStartLog", "CaseSensitive", false);
 
         var entryPoint = activity.Items.OfType<ExecutableItem>().FirstOrDefault(item => item.Type == "EntryPoint");
-        var connection = activity.GetControlConnectionWithSourcePort(entryPoint?.ControlOut?.Id);
+        var connection = activity.GetControlConnectionWithSourceComponent(entryPoint?.Id, entryPoint?.ControlOut?.Id);
         if (connection is null)
             return new RuleCheckResult
             {
@@ -69,12 +69,14 @@ public class DiagnosticsRuleChecker : IRuleChecker
                 Comments = "Start node disconnected."
             };
 
-        var firstExecutableItem = activity.GetExecutableItemWithControlInPort(connection.SinkPortId);
+        var firstExecutableItem =
+            activity.GetExecutableItemWithControlInPort(connection.SinkComponentId, connection.SinkPortId);
 
         if (firstExecutableItem?.Type == "CatchError")
         {
             var catchErrorItem = firstExecutableItem;
-            connection = activity.GetControlConnectionWithSourcePort(catchErrorItem.ControlOut?.Id);
+            connection =
+                activity.GetControlConnectionWithSourceComponent(catchErrorItem.Id, catchErrorItem.ControlOut?.Id);
             if (connection is null)
                 return new RuleCheckResult
                 {
@@ -83,7 +85,8 @@ public class DiagnosticsRuleChecker : IRuleChecker
                     Status = ParseSeverity(severity),
                     Comments = "Try port of Try-Catch node disconnected."
                 };
-            var secondExecutableItem = activity.GetExecutableItemWithControlInPort(connection.SinkPortId);
+            var secondExecutableItem =
+                activity.GetExecutableItemWithControlInPort(connection.SinkComponentId, connection.SinkPortId);
             if (secondExecutableItem is not null && IsLogWriter(secondExecutableItem))
             {
                 if (!allowedLogLevels.Contains(secondExecutableItem.LogMode, StringComparer.OrdinalIgnoreCase))
@@ -129,9 +132,7 @@ public class DiagnosticsRuleChecker : IRuleChecker
         var caseSensitive = _config.GetParameter("ActivityEndLog", "CaseSensitive", false);
 
         var exitPoint = activity.Items.OfType<ExecutableItem>().FirstOrDefault(item => item.Type == "ExitPoint");
-        var connections = activity.Items.OfType<ControlConnection>()
-            .Where(connection => connection.SinkPortId == exitPoint?.ControlIn?.Id)
-            .ToList();
+        var connections = activity.GetControlConnectionsWithSinkComponent(exitPoint?.Id, exitPoint?.ControlIn?.Id);
 
         if (connections.Count == 0)
             return new RuleCheckResult
@@ -144,7 +145,8 @@ public class DiagnosticsRuleChecker : IRuleChecker
 
         foreach (var connection in connections)
         {
-            var currentExecutableItem = activity.GetExecutableItemWithControlOutPort(connection.SourcePortId);
+            var currentExecutableItem =
+                activity.GetExecutableItemWithControlOutPort(connection.SourceComponentId, connection.SourcePortId);
 
             if (currentExecutableItem is not null && IsLogWriter(currentExecutableItem) &&
                 MatchesExpectedLogMessage(currentExecutableItem,
@@ -172,7 +174,6 @@ public class DiagnosticsRuleChecker : IRuleChecker
         };
     }
 
-
     private RuleCheckResult HasExceptionLog(Activity activity, Rule rule)
     {
         var severity = _config.GetParameter("ExceptionLog", "Severity", "Fail");
@@ -197,7 +198,7 @@ public class DiagnosticsRuleChecker : IRuleChecker
             var errorOutId = catchErrorItem.ErrorOutPortId;
             if (errorOutId.HasValue && errorOutId != Guid.Empty)
             {
-                var connection = activity.GetControlConnectionWithSourcePort(errorOutId);
+                var connection = activity.GetControlConnectionWithSourceComponent(catchErrorItem.Id, errorOutId);
                 if (connection is null)
                     return new RuleCheckResult
                     {
@@ -206,7 +207,8 @@ public class DiagnosticsRuleChecker : IRuleChecker
                         Status = ParseSeverity(severity),
                         Comments = "'On Error' port of 'Try-Catch' not used"
                     };
-                var logWriterItem = activity.GetExecutableItemWithControlInPort(connection.SinkPortId);
+                var logWriterItem =
+                    activity.GetExecutableItemWithControlInPort(connection.SinkComponentId, connection.SinkPortId);
 
                 if (!IsLogWriter(logWriterItem))
                     return new RuleCheckResult
@@ -242,7 +244,7 @@ public class DiagnosticsRuleChecker : IRuleChecker
     {
         var severity = _config.GetParameter("ActivityErrorHandling", "Severity", "Fail");
         var entryPoint = activity.Items.OfType<ExecutableItem>().FirstOrDefault(item => item.Type == "EntryPoint");
-        var connection = activity.GetControlConnectionWithSourcePort(entryPoint?.ControlOut?.Id);
+        var connection = activity.GetControlConnectionWithSourceComponent(entryPoint?.Id, entryPoint?.ControlOut?.Id);
         if (connection is null)
             return new RuleCheckResult
             {
@@ -252,7 +254,8 @@ public class DiagnosticsRuleChecker : IRuleChecker
                 Comments = "Start node disconnected."
             };
 
-        var firstExecutableItem = activity.GetExecutableItemWithControlInPort(connection.SinkPortId);
+        var firstExecutableItem =
+            activity.GetExecutableItemWithControlInPort(connection.SinkComponentId, connection.SinkPortId);
         if (firstExecutableItem?.Type == "CatchError")
             return new RuleCheckResult
             {
@@ -292,9 +295,9 @@ public class DiagnosticsRuleChecker : IRuleChecker
 
         foreach (var catchErrorItem in catchErrorItems)
         {
-            var errorOutId = catchErrorItem.ErrorOutPortId;
-            var controlConnection = activity.GetControlConnectionWithSourcePort(errorOutId);
-            if (controlConnection is null)
+            var connection =
+                activity.GetControlConnectionWithSourceComponent(catchErrorItem.Id, catchErrorItem.ErrorOutPortId);
+            if (connection is null)
                 return new RuleCheckResult
                 {
                     Rule = rule,
@@ -303,7 +306,8 @@ public class DiagnosticsRuleChecker : IRuleChecker
                     Comments = "'On Error' port of Try-Catch node disconnected"
                 };
 
-            var errorOutPortConnectedItem = activity.GetExecutableItemWithControlInPort(controlConnection.SinkPortId);
+            var errorOutPortConnectedItem =
+                activity.GetExecutableItemWithControlInPort(connection.SinkComponentId, connection.SinkPortId);
 
             if (errorOutPortConnectedItem is null || errorOutPortConnectedItem.Type == "ExitPoint")
                 return new RuleCheckResult
@@ -320,8 +324,8 @@ public class DiagnosticsRuleChecker : IRuleChecker
                 var mappedVariables = catchErrorItem.MappedVariables;
                 if (mappedVariables.Count > 0) continue;
 
-                var errorMessageOutId = catchErrorItem.ErrorMessagePortId;
-                var dataConnection = activity.GetDataConnectionWithSourcePort(errorMessageOutId);
+                var dataConnection =
+                    activity.GetDataConnectionWithSourceComponent(catchErrorItem.Id, catchErrorItem.ErrorMessagePortId);
                 if (dataConnection is null)
                     return new RuleCheckResult
                     {
@@ -390,7 +394,7 @@ public class DiagnosticsRuleChecker : IRuleChecker
             if (item.OnErrorAction != OnErrorAction.Inherit || item.OnErrorActionAfterRetry != OnErrorAction.Inherit)
             {
                 // Check if the component has a comment
-                var connection = activity.GetCommentConnectionWithSourcePort(item.CommentPortId);
+                var connection = activity.GetCommentConnectionWithSourceComponent(item.Id, item.CommentPortId);
                 if (connection is null)
                     return new RuleCheckResult
                     {

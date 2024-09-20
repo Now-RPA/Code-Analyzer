@@ -8,6 +8,7 @@ namespace CodeAnalyzer.Services.RuleChecker;
 
 public class FrameworkRuleChecker : IRuleChecker
 {
+    private const string FrameworkBasePath = "Activities/Framework";
     private static readonly Regex ActivityNamingDefaultPatternRegex = new("^[a-zA-Z0-9\\s-_]*$", RegexOptions.Compiled);
 
     private static readonly Regex VariableNamingDefaultPatternRegex =
@@ -87,13 +88,13 @@ public class FrameworkRuleChecker : IRuleChecker
     private List<RuleCheckResult> CheckFrameworkActivities(Process process, Rule rule)
     {
         var requiredActivities = _config.GetStringArrayParameter("FrameworkActivities", "RequiredActivities",
-            ["Initialize Workflow", "Get Workitem", "Process Workitem", "Exit Workflow"]);
+            ["Initialize", "Queue Setup", "Queue Processing", "Exit"]);
         var severity = _config.GetParameter("FrameworkActivities", "Severity", "Fail");
 
         List<RuleCheckResult> results = [];
         foreach (var activityName in requiredActivities)
         {
-            var activityPath = $"Activities/Framework/{activityName}";
+            var activityPath = $"{FrameworkBasePath}/{activityName}";
             var rootPath = Path.GetDirectoryName(activityPath) ?? string.Empty;
             var activityExists = process.Activities.Any(activity =>
                 activity.Name == activityName && NormalizePath(activity.RootPath) == NormalizePath(rootPath));
@@ -134,15 +135,18 @@ public class FrameworkRuleChecker : IRuleChecker
         foreach (var activity in process.Activities)
         {
             var isValidName = regex.IsMatch(activity.Name);
-            var isValidLength = activity.Name.Length >= minLength;
+            var isValidLength = activity.Name.Trim().Length >= minLength;
+            var isValidText = !Regex.IsMatch(activity.Name.Trim(), @"(.)\1{2,}");
             RuleCheckResult ruleCheckResult = new()
             {
                 Rule = rule,
+
                 Source = $"{activity.RootPath}/{activity.Name}",
-                Status = isValidName && isValidLength ? RuleCheckStatus.Pass : ParseSeverity(severity),
-                Comments = isValidName && isValidLength
+                Status = isValidName && isValidLength && isValidText ? RuleCheckStatus.Pass : ParseSeverity(severity),
+                Comments = isValidName && isValidLength && isValidText
                     ? $"The activity '{activity.Name}' follows the naming convention and length requirements."
-                    : $"The activity '{activity.Name}' does not meet the naming requirements. It should match the pattern '{regexPattern}' and have a minimum length of {minLength} characters."
+                    : $"The activity '{activity.Name}' does not meet the naming requirements." +
+                      $" It should match the pattern '{regexPattern}' and have a minimum length of {minLength} with non repeating characters."
             };
             ruleCheckResults.Add(ruleCheckResult);
         }
@@ -155,7 +159,7 @@ public class FrameworkRuleChecker : IRuleChecker
         var severity = _config.GetParameter("GlobalVariableNamingConvention", "Severity", "Warn");
         var minLength = _config.GetParameter("GlobalVariableNamingConvention", "MinLength", 3);
         var regexPattern =
-            _config.GetParameter("GlobalVariableNamingConvention", "NamingRegex", "^[a-zA-Z_][a-zA-Z0-9_]*$");
+            _config.GetParameter("GlobalVariableNamingConvention", "NamingRegex", "^[a-zA-Z0-9\\s-_]*$");
 
         Regex regex;
         try
@@ -174,14 +178,16 @@ public class FrameworkRuleChecker : IRuleChecker
             {
                 var isValidName = regex.IsMatch(variable.Name);
                 var isValidLength = variable.Name.Length >= minLength;
+                var isValidText = !Regex.IsMatch(variable.Name.Trim(), @"(.)\1{2,}");
                 RuleCheckResult ruleCheckResult = new()
                 {
                     Rule = rule,
                     Source = $"{variable.RootPath}/{variable.Name}",
-                    Status = isValidName && isValidLength ? RuleCheckStatus.Pass : ParseSeverity(severity),
-                    Comments = isValidName && isValidLength
+                    Status = isValidName && isValidLength && isValidText? RuleCheckStatus.Pass : ParseSeverity(severity),
+                    Comments = isValidName && isValidLength && isValidText
                         ? $"The global variable '{variable.Name}' follows the naming convention and length requirements."
-                        : $"The global variable '{variable.Name}' does not meet the naming requirements. It should match the pattern '{regexPattern}' and have a minimum length of {minLength} characters."
+                        : $"The global variable '{variable.Name}' does not meet the naming requirements. It should match the pattern '{regexPattern}' " +
+                          $"and have a minimum length of {minLength} with non repeating characters."
                 };
                 ruleCheckResults.Add(ruleCheckResult);
             }
@@ -194,7 +200,7 @@ public class FrameworkRuleChecker : IRuleChecker
         var severity = _config.GetParameter("ActivityVariableNamingConvention", "Severity", "Warn");
         var minLength = _config.GetParameter("ActivityVariableNamingConvention", "MinLength", 3);
         var regexPattern =
-            _config.GetParameter("ActivityVariableNamingConvention", "NamingRegex", "^[a-zA-Z_][a-zA-Z0-9_]*$");
+            _config.GetParameter("ActivityVariableNamingConvention", "NamingRegex", "^[a-zA-Z0-9\\s-_]*$");
 
         Regex regex;
         try
@@ -231,15 +237,11 @@ public class FrameworkRuleChecker : IRuleChecker
     private List<RuleCheckResult> CheckGlobalVariablePlacement(Process process, Rule rule)
     {
         var severity = _config.GetParameter("GlobalVariablePlacement", "Severity", "Warn");
-        var expectedPath = _config.GetParameter("GlobalVariablePlacement", "ExpectedPath", "Global Objects/Variables");
-
         List<RuleCheckResult> ruleCheckResults = [];
         foreach (var variable in process.Variables)
             if (variable.DataType == "AutxVariable")
             {
-                var isValidPlacement = variable.RootPath.Equals(expectedPath, StringComparison.OrdinalIgnoreCase) ||
-                                       variable.RootPath.StartsWith(expectedPath + "\\",
-                                           StringComparison.OrdinalIgnoreCase);
+                var isValidPlacement = variable.RootPath.IndexOf("Variables", StringComparison.OrdinalIgnoreCase) >= 0;
                 RuleCheckResult ruleCheckResult = new()
                 {
                     Rule = rule,
@@ -247,7 +249,7 @@ public class FrameworkRuleChecker : IRuleChecker
                     Status = isValidPlacement ? RuleCheckStatus.Pass : ParseSeverity(severity),
                     Comments = isValidPlacement
                         ? $"The global variable '{variable.Name}' is placed under the correct folder."
-                        : $"The global variable '{variable.Name}' should be placed under '{expectedPath}' or its subfolders."
+                        : $"The global variable '{variable.Name}' should be placed under 'Variables' or its subfolders."
                 };
                 ruleCheckResults.Add(ruleCheckResult);
             }
@@ -283,17 +285,13 @@ public class FrameworkRuleChecker : IRuleChecker
     private List<RuleCheckResult> CheckConnectorGrouping(Process process, Rule rule)
     {
         var severity = _config.GetParameter("ConnectorGrouping", "Severity", "Warn");
-        var expectedPath = _config.GetParameter("ConnectorGrouping", "ExpectedPath", "Global Objects/{ConnectorType}");
 
         List<RuleCheckResult> ruleCheckResults = [];
         foreach (var variable in process.Variables)
             if (variable.DataType != "AutxVariable")
             {
                 var connectorType = GetConnectorType(variable.DataType);
-                var expectedConnectorPath = expectedPath.Replace("{ConnectorType}", connectorType);
-                var isValidGrouping =
-                    variable.RootPath.Equals(expectedConnectorPath, StringComparison.OrdinalIgnoreCase) ||
-                    variable.RootPath.StartsWith(expectedConnectorPath + "\\", StringComparison.OrdinalIgnoreCase);
+                var isValidGrouping = variable.RootPath.IndexOf(connectorType, StringComparison.OrdinalIgnoreCase) >= 0;
                 RuleCheckResult ruleCheckResult = new()
                 {
                     Rule = rule,
@@ -301,7 +299,7 @@ public class FrameworkRuleChecker : IRuleChecker
                     Status = isValidGrouping ? RuleCheckStatus.Pass : ParseSeverity(severity),
                     Comments = isValidGrouping
                         ? $"The connector '{variable.Name}' is grouped under the correct folder."
-                        : $"The connector '{variable.Name}' should be grouped under '{expectedConnectorPath}' or its subfolders."
+                        : $"The connector '{variable.Name}' should be grouped under '{connectorType}' or its subfolders."
                 };
                 ruleCheckResults.Add(ruleCheckResult);
             }
@@ -338,34 +336,46 @@ public class FrameworkRuleChecker : IRuleChecker
     {
         var severity = _config.GetParameter("PickWorkitem", "Severity", "Warn");
         var expectedName = _config.GetParameter("PickWorkitem", "ExpectedName", "PickWorkitem");
+        var activityNames = _config.GetStringArrayParameter("PickWorkitem", "ActivityNames", ["Queue Processing"]);
+
 
         List<RuleCheckResult> ruleCheckResults = [];
-        var getWorkitemActivity =
-            process.Activities.FirstOrDefault(a => a.Name == "Get Workitem" && a.RootPath == "Activities/Framework");
-        if (getWorkitemActivity == null)
+        foreach (var activityName in activityNames)
         {
-            ruleCheckResults.Add(new RuleCheckResult
+            var pickWorkitemActivity =
+                process.Activities.FirstOrDefault(a =>
+                    a.Name == activityName &&
+                    (a.RootPath.StartsWith(FrameworkBasePath + "/", StringComparison.OrdinalIgnoreCase) ||
+                     a.RootPath.Equals(FrameworkBasePath, StringComparison.OrdinalIgnoreCase)
+                    )
+                );
+            if (pickWorkitemActivity == null)
             {
-                Rule = rule,
-                Source = "Activities",
-                Status = ParseSeverity(severity),
-                Comments = "'Activities/Framework/Get Workitem' activity is missing."
-            });
-        }
-        else
-        {
-            var pickWorkitemExists =
-                getWorkitemActivity.Items.OfType<ExecutableItem>().Any(i => i.Name == expectedName);
-            ruleCheckResults.Add(new RuleCheckResult
+                ruleCheckResults.Add(new RuleCheckResult
+                {
+                    Rule = rule,
+                    Source = "Activities",
+                    Status = ParseSeverity(severity),
+                    Comments = $"Activity with path '{FrameworkBasePath}/../{activityName}' is missing."
+                });
+            }
+            else
             {
-                Rule = rule,
-                Source = $"{getWorkitemActivity.RootPath}/{getWorkitemActivity.Name}",
-                Status = pickWorkitemExists ? RuleCheckStatus.Pass : ParseSeverity(severity),
-                Comments = pickWorkitemExists
-                    ? $"'{expectedName}' action is used in the 'Get Workitem' activity."
-                    : $"'{expectedName}' action is missing in the 'Get Workitem' activity."
-            });
+                var pickWorkitemExists =
+                    pickWorkitemActivity.Items.OfType<ExecutableItem>().Any(i =>
+                        i.Name != null && i.Name.Equals(expectedName, StringComparison.OrdinalIgnoreCase));
+                ruleCheckResults.Add(new RuleCheckResult
+                {
+                    Rule = rule,
+                    Source = $"{pickWorkitemActivity.RootPath}/{pickWorkitemActivity.Name}",
+                    Status = pickWorkitemExists ? RuleCheckStatus.Pass : ParseSeverity(severity),
+                    Comments = pickWorkitemExists
+                        ? $"'{expectedName}' action is used in the '{activityName}' activity."
+                        : $"'{expectedName}' action is missing in the '{activityName}' activity."
+                });
+            }
         }
+
 
         return ruleCheckResults;
     }
@@ -374,35 +384,46 @@ public class FrameworkRuleChecker : IRuleChecker
     {
         var severity = _config.GetParameter("UpdateWorkitem", "Severity", "Fail");
         var expectedName = _config.GetParameter("UpdateWorkitem", "ExpectedName", "UpdateWorkitem");
+        var activityNames = _config.GetStringArrayParameter("UpdateWorkitem", "ActivityNames",
+            ["Process Work Item", "Process Business Exception", "Process System Exception"]);
 
         List<RuleCheckResult> ruleCheckResults = [];
-        var processWorkitemActivity =
-            process.Activities.FirstOrDefault(a =>
-                a.Name == "Process Workitem" && a.RootPath == "Activities/Framework");
-        if (processWorkitemActivity == null)
+        foreach (var activityName in activityNames)
         {
-            ruleCheckResults.Add(new RuleCheckResult
+            var updateWorkitemActivity =
+                process.Activities.FirstOrDefault(a =>
+                    a.Name == activityName &&
+                    (a.RootPath.StartsWith(FrameworkBasePath + "/", StringComparison.OrdinalIgnoreCase) ||
+                     a.RootPath.Equals(FrameworkBasePath, StringComparison.OrdinalIgnoreCase)
+                    )
+                );
+            if (updateWorkitemActivity == null)
             {
-                Rule = rule,
-                Source = "Activities",
-                Status = ParseSeverity(severity),
-                Comments = "'Activities/Framework/Process Workitem' activity is missing."
-            });
-        }
-        else
-        {
-            var updateWorkitemExists =
-                processWorkitemActivity.Items.OfType<ExecutableItem>().Any(i => i.Name == expectedName);
-            ruleCheckResults.Add(new RuleCheckResult
+                ruleCheckResults.Add(new RuleCheckResult
+                {
+                    Rule = rule,
+                    Source = "Activities",
+                    Status = ParseSeverity(severity),
+                    Comments = $"Activity with path '{FrameworkBasePath}/../{activityName}' is missing."
+                });
+            }
+            else
             {
-                Rule = rule,
-                Source = $"{processWorkitemActivity.RootPath}/{processWorkitemActivity.Name}",
-                Status = updateWorkitemExists ? RuleCheckStatus.Pass : ParseSeverity(severity),
-                Comments = updateWorkitemExists
-                    ? $"The '{expectedName}' action is used in the 'Process Workitem' activity."
-                    : $"The '{expectedName}' action is missing in the 'Process Workitem' activity."
-            });
+                var updateWorkitemExists =
+                    updateWorkitemActivity.Items.OfType<ExecutableItem>().Any(i =>
+                        i.Name != null && i.Name.Equals(expectedName, StringComparison.OrdinalIgnoreCase));
+                ruleCheckResults.Add(new RuleCheckResult
+                {
+                    Rule = rule,
+                    Source = $"{updateWorkitemActivity.RootPath}/{updateWorkitemActivity.Name}",
+                    Status = updateWorkitemExists ? RuleCheckStatus.Pass : ParseSeverity(severity),
+                    Comments = updateWorkitemExists
+                        ? $"'{expectedName}' action is used in the '{activityName}' activity."
+                        : $"'{expectedName}' action is missing in the '{activityName}' activity."
+                });
+            }
         }
+
 
         return ruleCheckResults;
     }

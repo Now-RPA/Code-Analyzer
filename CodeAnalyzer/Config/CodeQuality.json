@@ -1,12 +1,13 @@
 ﻿{
   "OpenCloseMethodPair": {
-    "Name": "Open-Close Method Pair",
+    "Name": "Open-Close Connector",
     "Description": "Activities with an 'Open' method must have a corresponding 'Close' method.",
     "Enabled": true,
     "Severity": "Warn",
     "OpenMethodPrefixes": [
       "Open",
-      "Load"
+      "Load",
+      "SetAccount"
     ],
     "CloseMethodPrefixes": [
       "Close"
@@ -16,7 +17,7 @@
     "Name": "Hardcoded Delay",
     "Description": "Activities should not use hardcoded delays (WaitForTime)",
     "Enabled": true,
-    "Severity": "Fail",
+    "Severity": "Warn",
     "ProhibitedTypes": [
       "WaitForTime"
     ]
@@ -25,7 +26,7 @@
     "Name": "Modified Delay Properties",
     "Description": "BeforeDelay and AfterDelay should be avoided, and EnableTimeout should be false",
     "Enabled": true,
-    "Severity": "Fail",
+    "Severity": "Warn",
     "AllowedBeforeDelay": 0,
     "AllowedAfterDelay": 0,
     "AllowedEnableTimeout": false

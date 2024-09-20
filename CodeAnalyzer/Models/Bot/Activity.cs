@@ -13,59 +13,46 @@ public record Activity
     public OnErrorAction OnErrorActionAfterRetry { get; set; }
     public string RootPath { get; set; } = string.Empty;
 
-    public CommentConnection? GetCommentConnectionWithSourcePort(Guid? portId)
+    public CommentConnection? GetCommentConnectionWithSourceComponent(Guid? sourceComponentId, Guid? sourcePortId)
     {
         return Items.OfType<CommentConnection>()
-            .FirstOrDefault(connection => connection.SourcePortId == portId);
+            .FirstOrDefault(connection => connection.SourceComponentId == sourceComponentId &&
+                                          connection.SourcePortId == sourcePortId);
     }
 
-    public ControlConnection? GetControlConnectionWithSourcePort(Guid? portId)
+    public ControlConnection? GetControlConnectionWithSourceComponent(Guid? sourceComponentId, Guid? sourcePortId)
     {
         return Items.OfType<ControlConnection>()
-            .FirstOrDefault(connection => connection.SourcePortId == portId);
+            .FirstOrDefault(connection => connection.SourceComponentId == sourceComponentId &&
+                                          connection.SourcePortId == sourcePortId);
     }
 
-    public DataConnection? GetDataConnectionWithSourcePort(Guid? portId)
+    public DataConnection? GetDataConnectionWithSourceComponent(Guid? sourceComponentId, Guid? sourcePortId)
     {
         return Items.OfType<DataConnection>()
-            .FirstOrDefault(connection => connection.SourcePortId == portId);
+            .FirstOrDefault(connection => connection.SourceComponentId == sourceComponentId &&
+                                          connection.SourcePortId == sourcePortId);
     }
 
-    public List<DataConnection> GetDataConnectionsWithSourcePort(Guid? portId)
+    public List<ControlConnection> GetControlConnectionsWithSinkComponent(Guid? sinkComponentId, Guid? sinkPortId)
     {
-        return Items.OfType<DataConnection>()
-            .Where(connection => connection.SourcePortId == portId)
+        return Items.OfType<ControlConnection>()
+            .Where(connection => connection.SinkComponentId == sinkComponentId &&
+                                 connection.SinkPortId == sinkPortId)
             .ToList();
     }
 
-    public ControlConnection? GetControlConnectionWithSinkPort(Guid? portId)
-    {
-        return Items.OfType<ControlConnection>()
-            .FirstOrDefault(connection => connection.SinkPortId == portId);
-    }
-
-    public List<ControlConnection> GetControlConnectionsWithSinkPort(Guid? portId)
-    {
-        return Items.OfType<ControlConnection>()
-            .Where(connection => connection.SinkPortId == portId)
-            .ToList();
-    }
-
-    public DataConnection? GetDataControlConnectionWithSinkPort(Guid? portId)
-    {
-        return Items.OfType<DataConnection>()
-            .FirstOrDefault(connection => connection.SinkPortId == portId);
-    }
-
-    public ExecutableItem? GetExecutableItemWithControlInPort(Guid? portId)
+    public ExecutableItem? GetExecutableItemWithControlInPort(Guid? itemId, Guid? itemControlInPortId)
     {
         return Items.OfType<ExecutableItem>()
-            .FirstOrDefault(item => item.ControlIn?.Id == portId);
+            .FirstOrDefault(item => item.Id == itemId &&
+                                    item.ControlIn?.Id == itemControlInPortId);
     }
 
-    public ExecutableItem? GetExecutableItemWithControlOutPort(Guid? portId)
+    public ExecutableItem? GetExecutableItemWithControlOutPort(Guid? itemId, Guid? itemControlOutPortId)
     {
         return Items.OfType<ExecutableItem>()
-            .FirstOrDefault(item => item.ControlOut?.Id == portId);
+            .FirstOrDefault(item => item.Id == itemId &&
+                                    item.ControlOut?.Id == itemControlOutPortId);
     }
 }
