@@ -8,6 +8,7 @@
         <Nullable>enable</Nullable>
         <ApplicationIcon>Assets\Icon.ico</ApplicationIcon>
         <EnforceCodeStyleInBuild>True</EnforceCodeStyleInBuild>
+        <Version>1.2.0</Version>
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
